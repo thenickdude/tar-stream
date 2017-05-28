@@ -533,3 +533,40 @@ test('base 256 size', function (t) {
 
   extract.end(fs.readFileSync(fixtures.BASE_256_SIZE))
 })
+
+test('latin-1', function (t) { // can unpack filenames encoded in latin-1
+  t.plan(3)
+
+  // This is the older name for the "latin1" encoding in Node
+  var extract = tar.extract({ filenameEncoding: 'binary' })
+  var noEntries = false
+
+  extract.on('entry', function (header, stream, callback) {
+    t.deepEqual(header, {
+      name: 'En français, s\'il vous plaît?.txt',
+      mode: parseInt('644', 8),
+      uid: 0,
+      gid: 0,
+      size: 14,
+      mtime: new Date(1495941034000),
+      type: 'file',
+      linkname: null,
+      uname: 'root',
+      gname: 'root',
+      devmajor: 0,
+      devminor: 0
+    })
+
+    stream.pipe(concat(function (data) {
+      noEntries = true
+      t.same(data.toString(), 'Hello, world!\n')
+      callback()
+    }))
+  })
+
+  extract.on('finish', function () {
+    t.ok(noEntries)
+  })
+
+  extract.end(fs.readFileSync(fixtures.LATIN1_TAR))
+})
